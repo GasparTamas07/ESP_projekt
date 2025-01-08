@@ -18,6 +18,10 @@ const char* password = "";
 WiFiServer server(80);
 String header; // HTTP request header
 
+// Temperature limits
+float tempMin = 20.0; // Default minimum temperature
+float tempMax = 22.0; // Default maximum temperature
+
 void setup() {
   Serial.begin(115200);
 
@@ -57,6 +61,24 @@ void loop() {
         if (c == '\n') {
           // End of HTTP header, send response
           if (currentLine.length() == 0) {
+            // Process temperature update request
+            if (header.indexOf("GET /update") >= 0) {
+              int tempMinIndex = header.indexOf("tempMin=");
+              int tempMaxIndex = header.indexOf("tempMax=");
+              
+              if (tempMinIndex != -1 && tempMaxIndex != -1) {
+                String tempMinValue = header.substring(tempMinIndex + 8, header.indexOf('&', tempMinIndex));
+                String tempMaxValue = header.substring(tempMaxIndex + 8, header.indexOf(' ', tempMaxIndex));
+                
+                tempMin = tempMinValue.toFloat();
+                tempMax = tempMaxValue.toFloat();
+                
+                Serial.println("Updated temperature limits:");
+                Serial.println("tempMin: " + String(tempMin));
+                Serial.println("tempMax: " + String(tempMax));
+              }
+            }
+
             // Read temperature and humidity
             float temperature = dht.readTemperature();
             float humidity = dht.readHumidity();
@@ -66,7 +88,7 @@ void loop() {
             }
 
             // Control LEDs based on temperature
-            if (temperature >= 20 && temperature <= 22) {
+            if (temperature >= tempMin && temperature <= tempMax) {
               digitalWrite(greenLED, HIGH);
               digitalWrite(redLED, LOW);
             } else {
@@ -76,7 +98,7 @@ void loop() {
 
             // Generate HTTP response
             client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
+            client.println("Content-type:text/html; charset=utf-8");
             client.println("Connection: close");
             client.println();
 
@@ -87,8 +109,15 @@ void loop() {
             client.println("<body><h1>ESP8266 Sensor Monitor</h1>");
             client.println("<p>Hőmérséklet: " + String(temperature) + " °C</p>");
             client.println("<p>Páratartalom: " + String(humidity) + " %</p>");
-            client.println("<p>Zöld LED: " + String(temperature >= 20 && temperature <= 22 ? "ON" : "OFF") + "</p>");
-            client.println("<p>Piros LED: " + String(temperature < 20 || temperature > 22 ? "ON" : "OFF") + "</p>");
+            client.println("<p>Zöld LED: " + String(temperature >= tempMin && temperature <= tempMax ? "ON" : "OFF") + "</p>");
+            client.println("<p>Piros LED: " + String(temperature < tempMin || temperature > tempMax ? "ON" : "OFF") + "</p>");
+            client.println("<form action=\"/update\" method=\"get\">");
+            client.println("<label for=\"tempMin\">Minimum hőmérséklet:</label>");
+            client.println("<input type=\"number\" id=\"tempMin\" name=\"tempMin\" step=\"0.1\" value=\"" + String(tempMin) + "\"><br>");
+            client.println("<label for=\"tempMax\">Maximum hőmérséklet:</label>");
+            client.println("<input type=\"number\" id=\"tempMax\" name=\"tempMax\" step=\"0.1\" value=\"" + String(tempMax) + "\"><br>");
+            client.println("<input type=\"submit\" value=\"Mentés\">");
+            client.println("</form>");
             client.println("</body></html>");
 
             break;
