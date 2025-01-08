@@ -20,6 +20,8 @@
 ## 2. Tervdokumentáció
 **Kapcsolási rajz és felépítés**
 
+![kapcsolasi Rajz](kepek/kapcsolasi_rajz.png)
+
   A projektben az ESP8266EX-hez egy DHT11 hőmérséklet- és páratartalom-érzékelő, valamint két LED (piros és zöld) csatlakozik. Az alábbi táblázat összefoglalja a csatlakozásokat:
 
 | ESP8266 GPIO	| Alkatrész	| Funkció |
