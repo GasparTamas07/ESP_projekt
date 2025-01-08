@@ -2,17 +2,17 @@
 #include <DHT.h>
 
 // DHT setup
-#define DHTPIN D3        // GPIO0 (D3 on NodeMCU)
-#define DHTTYPE DHT11    // DHT11 sensor type
+#define DHTPIN D2
+#define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
 // LED setup
-const int redLED = D1;   // GPIO5 (D1 on NodeMCU)
-const int greenLED = D2; // GPIO4 (D2 on NodeMCU)
+const int redLED = D0;   
+const int greenLED = D1; 
 
 // Wi-Fi credentials
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
+const char* ssid = "";
+const char* password = "";
 
 // Web server setup
 WiFiServer server(80);
