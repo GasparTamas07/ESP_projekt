@@ -15,6 +15,8 @@
  - Flash memória: 4 MB.
  - Feszültség: 3,3V-os működés, USB-ről történő tápellátással.
 
+![ESP8266](kepek/esp8266ex.jpg)
+
 ## 2. Tervdokumentáció
 **Kapcsolási rajz és felépítés**
 
