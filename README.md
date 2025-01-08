@@ -26,9 +26,9 @@
 
 | ESP8266 GPIO	| Alkatrész	| Funkció |
 |:-----------:|:---------:|:-----:|
-| GPIO4	| DHT11	| Hőmérséklet- és páratartalom mérés |
-| GPIO5 (D1) | Piros LED | Hőmérséklet alapú visszajelzés |
-| GPIO4 (D2) | Zöld LED |	Hőmérséklet alapú visszajelzés |
+| GPIO4	(D2) | DHT11	| Hőmérséklet- és páratartalom mérés |
+| GPIO16 (D0) | Piros LED | Hőmérséklet alapú visszajelzés |
+| GPIO5 (D1) | Zöld LED |	Hőmérséklet alapú visszajelzés |
 
 **Alkatrészlista**
 | Alkatrész |	Mennyiség |	Leírás |
@@ -45,9 +45,9 @@
 
  1. Az ESP8266EX a DHT11 érzékelő segítségével méri a környezeti hőmérsékletet és páratartalmat.
  1. A mért hőmérséklet alapján vezérli a LED-ek állapotát:
-    - Zöld LED: Világít, ha a hőmérséklet 20–22 °C között van.
+    - Zöld LED: Világít, ha a hőmérséklet a felhasználó által megadott minimum és maximum határértékek között van.
     - Piros LED: Világít, ha a hőmérséklet kívül esik az optimális tartományon.
- 1. Az adatokat egy beépített webes felületen jeleníti meg, amely valós időben frissül.
+ 1. Az adatokat egy webes felületen jeleníti meg, amelyen keresztül a felhasználó módosíthatja a minimum és maximum hőmérsékleti határértékeket.
 
 **Részletes működés**
 
@@ -66,10 +66,10 @@ if (isnan(temperature) || isnan(humidity)) {
 
 Ha a mért adatok érvényesek, a rendszer továbblép a LED-ek vezérlésére.
 
-  2. **LED-ek vezérlése:** A mért hőmérséklet alapján az ESP8266 meghatározza, melyik LED világítson:
+  2. **LED-ek vezérlése:** A mért hőmérséklet összehasonlítása a webes felületen beállított határértékekkel, és a LED-ek megfelelő vezérlése:
 
 ```cpp
-if (temperature >= 20 && temperature <= 22) {
+if (temperature >= tempMin && temperature <= tempMax) {
     digitalWrite(greenLED, HIGH);
     digitalWrite(redLED, LOW);
 } else {
@@ -80,23 +80,42 @@ if (temperature >= 20 && temperature <= 22) {
 
 Ez egyszerű, átlátható logikával biztosítja a vizuális visszajelzést.
 
-  3. **Webes felület frissítése:** A rendszer az aktuális adatokat HTML formátumban küldi a kliens böngészőjének:
+  3. **Webes felület frissítése:** A webes felületen az aktuális érzékelőadatok, a LED-ek állapota, valamint az aktuális hőmérsékleti határértékek jelennek meg. Az értékek frissíthetők egy űrlapon keresztül:
 
 ```cpp
-client.println("<!DOCTYPE html><html>");
-client.println("<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-client.println("<style>body { text-align: center; font-family: Arial; }</style></head>");
-client.println("<body><h1>ESP8266 Sensor Monitor</h1>");
-client.println("<p>Hőmérséklet: " + String(temperature) + " °C</p>");
-client.println("<p>Páratartalom: " + String(humidity) + " %</p>");
-client.println("<p>Zöld LED: " + String(temperature >= 20 && temperature <= 22 ? "ON" : "OFF") + "</p>");
-client.println("<p>Piros LED: " + String(temperature < 20 || temperature > 22 ? "ON" : "OFF") + "</p>");
-client.println("</body></html>");
+client.println("<form action=\"/update\" method=\"get\">");
+client.println("<label for=\"tempMin\">Minimum hőmérséklet:</label>");
+client.println("<input type=\"number\" id=\"tempMin\" name=\"tempMin\" step=\"0.1\" value=\"" + String(tempMin) + "\"><br>");
+client.println("<label for=\"tempMax\">Maximum hőmérséklet:</label>");
+client.println("<input type=\"number\" id=\"tempMax\" name=\"tempMax\" step=\"0.1\" value=\"" + String(tempMax) + "\"><br>");
+client.println("<input type=\"submit\" value=\"Mentés\">");
+client.println("</form>");
 ```
 
-## 5. Következtetések
-Ez a projekt jól demonstrálja az ESP8266EX IoT környezetben való alkalmazását:
+A felhasználó által beküldött adatokat az ESP8266 dolgozza fel:
 
- - **Egyszerű adatmegjelenítés:** A webes felület megkönnyíti az érzékelők adatainak nyomon követését.
- - **Valós idejű vezérlés:** Az ESP8266 gyors reagálást biztosít a környezeti változásokra.
- - **Könnyű bővíthetőség:** A rendszer egyszerűen kiterjeszthető további érzékelőkkel vagy vezérlőkkel.
+```cpp
+if (header.indexOf("GET /update") >= 0) {
+    int tempMinIndex = header.indexOf("tempMin=");
+    int tempMaxIndex = header.indexOf("tempMax=");
+    
+    if (tempMinIndex != -1 && tempMaxIndex != -1) {
+        String tempMinValue = header.substring(tempMinIndex + 8, header.indexOf('&', tempMinIndex));
+        String tempMaxValue = header.substring(tempMaxIndex + 8, header.indexOf(' ', tempMaxIndex));
+        
+        tempMin = tempMinValue.toFloat();
+        tempMax = tempMaxValue.toFloat();
+        
+        Serial.println("Updated temperature limits:");
+        Serial.println("tempMin: " + String(tempMin));
+        Serial.println("tempMax: " + String(tempMax));
+    }
+}
+```
+
+## 4. Következtetések
+Ez a projekt bemutatja az ESP8266EX IoT környezetben való alkalmazását az alábbiak szerint:
+
+ - **Valós idejű adatmegjelenítés és vezérlés:** Az adatokat a webes felület folyamatosan frissíti, a LED-ek pedig azonnal reagálnak a hőmérsékleti változásokra.
+ - **Felhasználóbarát konfiguráció:** A webes interfész lehetővé teszi a hőmérsékleti határértékek egyszerű módosítását.
+ - **Bővíthetőség:** A rendszer könnyen kibővíthető további érzékelőkkel vagy vezérlőkkel.
